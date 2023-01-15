@@ -1,0 +1,1 @@
+/Users/ludovicofurlanetto/Documents/rust-projects/lin_alg/target/debug/lin_alg: /Users/ludovicofurlanetto/Documents/rust-projects/lin_alg/src/main.rs /Users/ludovicofurlanetto/Documents/rust-projects/lin_alg/src/matrix.rs /Users/ludovicofurlanetto/Documents/rust-projects/lin_alg/src/polynomials.rs /Users/ludovicofurlanetto/Documents/rust-projects/lin_alg/src/rational.rs
