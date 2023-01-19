@@ -8,11 +8,11 @@ use std::ops::{AddAssign, Mul};
 pub struct Matrix(Vec<Vec<Rational>>);
 
 impl Matrix {
-    pub fn new_from_string(input: String) -> Matrix {
-        parse_to_matrix(input)
+    pub fn new_from_string(input: &str) -> Self {
+        parse_to_matrix(input.to_string())
     }
 
-    pub fn new_identity(row_num: i32) -> Matrix {
+    pub fn new_identity(row_num: i32) -> Self {
         let mut id: Vec<Vec<Rational>> = vec![];
         for i in 0..row_num {
             let mut row = vec![];
@@ -30,7 +30,7 @@ impl Matrix {
             id.push(row);
         }
 
-        Matrix(id)
+        Self(id)
     }
 
     pub fn print(&self) {
@@ -66,23 +66,7 @@ impl Matrix {
         }
     }
 
-    pub fn reorder(&mut self) {
-        for i in 0..self.0.len() - 1 {
-            for j in 0..self.0[i].len() {
-                if self.0[i][j].num() == 0 && self.0[i + 1][j].num() != 0 {
-                    self.0.swap(i, i + 1);
-                    break;
-                }
-            }
-        }
-    }
-    pub fn invert(&mut self) -> Result<Self, &str> {
-        if self.0.len() != self.0[0].len() {
-            return Err("Can't invert a non-square matrix");
-        }
-
-        self.reorder();
-        let mut id = Matrix::new_identity(self.0.len() as i32);
+    fn gauss_with_adjacent(&mut self, other: &mut Self) {
         let mut offset = 0;
 
         for i in 0..(self.0.len() - 1) {
@@ -92,53 +76,113 @@ impl Matrix {
                 for j in (i + 1)..self.0.len() {
                     let b = self.0[j][offset] * -1;
 
-                    for k in offset..self.0[0].len() {
+                    for k in 0..self.0[0].len() {
                         let mut res = self.0[i][k];
                         res *= b / a;
                         self.0[j][k] += res;
 
-                        let mut res_id = id.0[i][k];
-                        res_id *= b / a;
-                        id.0[j][k] += res_id;
+                        let mut res_other = other.0[i][k];
+                        res_other *= b / a;
+                        other.0[j][k] += res_other;
                     }
                 }
                 offset += 1;
             }
         }
+    }
 
-        print!("PARTIAL RESULT\n");
-        self.print();
-        print!("\n");
-        id.print();
-        print!("\n\n");
-
-        let mut num_of_rows = offset + 1;
-        for row in (0..num_of_rows).rev() {
-            let b = self.0[row][offset];
-
-            for other_row in 0..row {
-                let a = self.0[other_row][offset] * -1;
-
-                let div = a / b;
-
-                for col in 0..self.0[0].len() {
-                    let mut el = self.0[row][col];
-                    el *= div;
-                    self.0[other_row][col] += el;
-
-                    let mut el_id = id.0[row][col];
-                    el_id *= div;
-                    id.0[other_row][col] += el_id;
+    pub fn reorder(&mut self) {
+        let mut offset = 0;
+        for row in 0..self.0.len() - 1 {
+            for j in 0..offset {
+                if self.0[row][j].num() == 0 && self.0[row + 1][j].num() != 0 {
+                    self.0.swap(row, row + 1);
+                    offset += 1;
+                    break;
                 }
             }
         }
-
-        self.print();
-        Ok(id)
     }
 
-    pub fn check_linear_indipendency(first: &Vec<Rational>, second: &Vec<Rational>) -> bool {
-        todo!()
+    fn inverted_gauss(&mut self) {
+        let mut offset = self.0.len() - 1;
+
+        let row_num = self.0.len();
+
+        for row in (0..row_num).rev() {
+            let b = self.0[row][offset];
+
+            for upper_row in 0..row {
+                let a = self.0[upper_row][offset];
+
+                for col in offset..self.0[0].len() {
+                    let div = a / b * -1;
+
+                    let mut result = self.0[row][col];
+                    result *= div;
+
+                    self.0[upper_row][col] += result;
+                }
+            }
+
+            for col in 0..self.0[0].len() {
+                self.0[row][col] = self.0[row][col] / b;
+            }
+            if offset != 0 {
+                offset -= 1;
+            }
+        }
+    }
+    fn inverted_gauss_with_adjacent(&mut self, other: &mut Self) {
+        let mut offset = self.0.len() - 1;
+
+        let row_num = self.0.len();
+
+        for row in (0..row_num).rev() {
+            let b = self.0[row][offset];
+
+            for upper_row in 0..row {
+                let a = self.0[upper_row][offset];
+
+                for col in 0..self.0[0].len() {
+                    let div = a / b * -1;
+
+                    let mut result = self.0[row][col];
+                    result *= div;
+                    self.0[upper_row][col] += result;
+
+                    let mut res = other.0[row][col];
+                    res *= div;
+                    other.0[upper_row][col] += res;
+                }
+            }
+
+            for col in 0..self.0[0].len() {
+                self.0[row][col] = self.0[row][col] / b;
+                other.0[row][col] = other.0[row][col] / b;
+            }
+            if offset != 0 {
+                offset -= 1;
+            }
+        }
+    }
+
+    pub fn invert(&mut self) -> Result<Self, &str> {
+        if self.0.len() != self.0[0].len() {
+            return Err("Can't invert a non-square matrix");
+        }
+
+        self.reorder();
+
+        let mut id = Matrix::new_identity(self.0.len() as i32);
+
+        self.gauss_with_adjacent(&mut id);
+        self.print();
+        print!("\n");
+        id.print();
+        self.inverted_gauss_with_adjacent(&mut id);
+
+        Ok(id)
     }
 }
 
