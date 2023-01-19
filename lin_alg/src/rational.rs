@@ -1,12 +1,6 @@
-/*
-
-  RATIONAL
-
-*/
-
 use std::clone::Clone;
 use std::cmp::PartialEq;
-use std::ops::{Add, AddAssign, Mul};
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 
 #[derive(Copy, Clone)]
 pub struct Rational {
@@ -60,11 +54,19 @@ impl Rational {
     pub fn print(&self) {
         assert!(self.den > 0);
 
-        if self.den != 1 {
+        if self.den != 1 && self.num != 0 {
             print!("{} / {}", self.num, self.den);
         } else {
             print!("{}", self.num);
         }
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.num == 0
+    }
+
+    pub fn num(&self) -> i32 {
+        self.num
     }
 }
 
@@ -102,6 +104,11 @@ impl AddAssign<&Rational> for Rational {
 
         self.den = lcm(&self.den, &other.den);
         self.num = self.den / original_den * self.num + self.den / other.den * other.num;
+
+        let gcd = gcd(&self.num, &self.den);
+
+        self.num /= gcd;
+        self.den /= gcd;
     }
 }
 impl AddAssign<Rational> for Rational {
@@ -109,7 +116,12 @@ impl AddAssign<Rational> for Rational {
         let original_den = self.den;
 
         self.den = lcm(&self.den, &other.den);
-        self.num = self.den / original_den * self.num + self.den / other.den * other.num;
+        self.num = self.num * self.den / original_den + other.num * self.den / other.den;
+
+        let gcd = gcd(&self.num, &self.den);
+
+        self.num /= gcd;
+        self.den /= gcd;
     }
 }
 impl Mul<&Rational> for &Rational {
@@ -124,6 +136,62 @@ impl Mul<&Rational> for &Rational {
 
         result.num /= gcd;
         result.den /= gcd;
+
+        result
+    }
+}
+
+impl Mul<i32> for Rational {
+    type Output = Self;
+    fn mul(self, rhs: i32) -> Self::Output {
+        let mut result: Rational = Rational {
+            num: self.num,
+            den: self.den,
+        };
+        result.num *= rhs;
+
+        let gcd = gcd(&result.num, &result.den);
+
+        result.num /= gcd;
+        result.den /= gcd;
+
+        result
+    }
+}
+
+impl MulAssign for Rational {
+    fn mul_assign(&mut self, rhs: Self) {
+        self.num *= rhs.num;
+        self.den *= rhs.den;
+
+        let gcd = gcd(&self.num, &self.den);
+
+        self.num /= gcd;
+        self.den /= gcd;
+    }
+}
+
+impl Div for Rational {
+    type Output = Self;
+
+    fn div(self, rhs: Rational) -> Rational {
+        let mut result: Rational = Rational {
+            num: self.num,
+            den: self.den,
+        };
+
+        result.num *= rhs.den;
+        result.den *= rhs.num;
+
+        let gcd = gcd(&result.num, &result.den);
+
+        result.num /= gcd;
+        result.den /= gcd;
+
+        if result.den < 0 {
+            result.den *= -1;
+            result.num *= -1;
+        }
 
         result
     }
